@@ -128,14 +128,14 @@ const config: Partial<Config> = {
 }
 
 /** Eye distance from orbit center in data units (larger = more zoomed out). */
-const CAMERA_START_DISTANCE = 1.38
+const CAMERA_START_DISTANCE = 2.2
 
 /**
- * Slight diagonal, close to Plotly’s default (1.25³): keeps the cloud near the
- * viewport middle; a modest +z gives a bit of overview without steep clipping.
+ * View from “above + right” in data space (+x, +y, +z) so the UMAP mass sits
+ * more centered in the viewport; normalized when building eye offset.
  */
 function initialCameraViewDir(): { x: number; y: number; z: number } {
-  return { x: 1.18, y: 1.12, z: 1.08 }
+  return { x: 1.42, y: 1.38, z: 1.45 }
 }
 
 /** Arithmetic mean — used as zoom fallback when layout has no camera.center. */
@@ -191,11 +191,72 @@ function umapBBoxCenter(pts: readonly SimilarityPoint[]): {
   }
 }
 
-function buildPlotLayout(points: readonly SimilarityPoint[]): Partial<Layout> {
-  const c = umapBBoxCenter(points)
+/** Look-at: blend bbox midpoint with mean so dense clusters pull the orbit center. */
+function umapLookAt(pts: readonly SimilarityPoint[]): {
+  x: number
+  y: number
+  z: number
+} {
+  if (pts.length === 0) return { x: 0, y: 0, z: 0 }
+  const b = umapBBoxCenter(pts)
+  const m = meanUmapCenter(pts)
+  const w = 0.58
+  return {
+    x: b.x * w + m.x * (1 - w),
+    y: b.y * w + m.y * (1 - w),
+    z: b.z * w + m.z * (1 - w),
+  }
+}
+
+function pointSetSignature(pts: readonly SimilarityPoint[]): string {
+  if (pts.length === 0) return '0'
+  if (pts.length <= 48) return `${pts.length}:${pts.map((p) => p.id).join('|')}`
+  const mid = pts[Math.floor(pts.length / 2)]!
+  return `${pts.length}:${pts[0]!.id}:${mid.id}:${pts[pts.length - 1]!.id}`
+}
+
+type SceneCamera = {
+  center: { x: number; y: number; z: number }
+  eye: { x: number; y: number; z: number }
+  up: { x: number; y: number; z: number }
+}
+
+function computeSceneCamera(points: readonly SimilarityPoint[]): SceneCamera {
+  const c = umapLookAt(points)
   const dir = initialCameraViewDir()
   const inv = 1 / Math.hypot(dir.x, dir.y, dir.z)
   const step = CAMERA_START_DISTANCE * inv
+  return {
+    center: { x: c.x, y: c.y, z: c.z },
+    eye: {
+      x: c.x + dir.x * step,
+      y: c.y + dir.y * step,
+      z: c.z + dir.z * step,
+    },
+    up: { x: 0, y: 0, z: 1 },
+  }
+}
+
+/** Flat keys only — nested `scene: { camera }` would replace the whole scene. */
+function buildSceneCameraFlatPatch(
+  points: readonly SimilarityPoint[]
+): Partial<Layout> {
+  const cam = computeSceneCamera(points)
+  return {
+    'scene.camera.center.x': cam.center.x,
+    'scene.camera.center.y': cam.center.y,
+    'scene.camera.center.z': cam.center.z,
+    'scene.camera.eye.x': cam.eye.x,
+    'scene.camera.eye.y': cam.eye.y,
+    'scene.camera.eye.z': cam.eye.z,
+    'scene.camera.up.x': cam.up.x,
+    'scene.camera.up.y': cam.up.y,
+    'scene.camera.up.z': cam.up.z,
+  } as unknown as Partial<Layout>
+}
+
+function buildPlotLayout(points: readonly SimilarityPoint[]): Partial<Layout> {
+  const cam = computeSceneCamera(points)
   return {
     autosize: true,
     paper_bgcolor: 'transparent',
@@ -218,13 +279,9 @@ function buildPlotLayout(points: readonly SimilarityPoint[]): Partial<Layout> {
       yaxis: { ...sceneAxis },
       zaxis: { ...sceneAxis },
       camera: {
-        center: { x: c.x, y: c.y, z: c.z },
-        eye: {
-          x: c.x + dir.x * step,
-          y: c.y + dir.y * step,
-          z: c.z + dir.z * step,
-        },
-        up: { x: 0, y: 0, z: 1 },
+        center: cam.center,
+        eye: cam.eye,
+        up: cam.up,
       },
     },
     showlegend: true,
@@ -295,6 +352,23 @@ function applyStrongWheelZoom(
   void PlotlyGL.relayout(gd, eyePatch)
 }
 
+/**
+ * gl3d applies camera before dataScale is final; the first `plotly_afterplot`
+ * fires before react-plotly binds `onAfterPlot`. Re-apply camera with flat keys
+ * after layout settles; only when the point set changes (not wheel/orbit).
+ */
+function trySyncSceneCamera(
+  gd: GraphDiv,
+  points: readonly SimilarityPoint[],
+  appliedSigRef: { current: string | null }
+) {
+  if (points.length === 0) return
+  const sig = pointSetSignature(points)
+  if (appliedSigRef.current === sig) return
+  appliedSigRef.current = sig
+  void PlotlyGL.relayout(gd, buildSceneCameraFlatPatch(points))
+}
+
 export default function IngredientSimilarityPlot() {
   const router = useRouter()
   const [points, setPoints] = useState<SimilarityPoint[]>([])
@@ -306,10 +380,9 @@ export default function IngredientSimilarityPlot() {
   const plotShellRef = useRef<HTMLDivElement>(null)
   const graphDivRef = useRef<GraphDiv | null>(null)
   const wheelCleanupRef = useRef<(() => void) | null>(null)
+  const appliedCameraSigRef = useRef<string | null>(null)
 
-  useEffect(() => {
-    pointsRef.current = points
-  }, [points])
+  pointsRef.current = points
 
   useEffect(() => {
     fetch('/api/similarity-map', {
@@ -397,6 +470,7 @@ export default function IngredientSimilarityPlot() {
   }
 
   const handlePlotPurge = () => {
+    appliedCameraSigRef.current = null
     wheelCleanupRef.current?.()
     wheelCleanupRef.current = null
     graphDivRef.current = null
@@ -427,8 +501,19 @@ export default function IngredientSimilarityPlot() {
           layout={plotLayout}
           config={config}
           onInitialized={(_figure, el) => {
-            graphDivRef.current = el as GraphDiv
-            attachWheelZoom(el as GraphDiv)
+            const gd = el as GraphDiv
+            graphDivRef.current = gd
+            attachWheelZoom(gd)
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                trySyncSceneCamera(gd, pointsRef.current, appliedCameraSigRef)
+              })
+            })
+          }}
+          onAfterPlot={() => {
+            const gd = graphDivRef.current
+            if (gd === null) return
+            trySyncSceneCamera(gd, pointsRef.current, appliedCameraSigRef)
           }}
           onPurge={handlePlotPurge}
           onHover={handleHover}
