@@ -128,7 +128,7 @@ const config: Partial<Config> = {
 }
 
 /** Eye distance from orbit center in data units (larger = more zoomed out). */
-const CAMERA_START_DISTANCE = 3.45
+const CAMERA_START_DISTANCE = 2.78
 
 /**
  * View from “above + right” in data space (+x, +y, +z); stronger +z for a
