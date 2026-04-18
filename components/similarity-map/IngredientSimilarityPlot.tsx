@@ -52,9 +52,30 @@ const CATEGORY_COLORS: Record<IngredientCategory, string> = {
 /** Wheel zoom factor per notch (closer to 1 = gentler). */
 const WHEEL_ZOOM_STEP = 1.09
 
-/** Log `scene.camera` on every relayout / relayouting (orbit, zoom). Set in `.env.local`: `NEXT_PUBLIC_SIMILARITY_MAP_CAMERA_DEBUG=true` */
-const CAMERA_DEBUG_LOG =
-  process.env.NEXT_PUBLIC_SIMILARITY_MAP_CAMERA_DEBUG === 'true'
+/** Log `scene.camera` on relayout / relayouting. `.env.local`: `NEXT_PUBLIC_SIMILARITY_MAP_CAMERA_DEBUG=true` (or `1` / `yes`), then restart `pnpm dev`. */
+function isSimilarityCameraDebugEnabled(): boolean {
+  const v =
+    process.env.NEXT_PUBLIC_SIMILARITY_MAP_CAMERA_DEBUG?.trim().toLowerCase()
+  if (v === undefined || v === '') return false
+  return v === 'true' || v === '1' || v === 'yes'
+}
+
+const CAMERA_DEBUG_LOG = isSimilarityCameraDebugEnabled()
+
+function logSimilarityCameraDebugBanner() {
+  if (typeof window === 'undefined') return
+  const raw = process.env.NEXT_PUBLIC_SIMILARITY_MAP_CAMERA_DEBUG
+  if (CAMERA_DEBUG_LOG) {
+    console.info(
+      '[SimilarityMap camera] Debug ON — logs appear when you orbit/zoom and after the first camera sync.'
+    )
+    return
+  }
+  console.info(
+    '[SimilarityMap camera] Debug OFF — add NEXT_PUBLIC_SIMILARITY_MAP_CAMERA_DEBUG=true (or 1) to .env.local and restart the dev server to log coordinates. Current value:',
+    raw === undefined ? '(unset)' : JSON.stringify(raw)
+  )
+}
 
 type TooltipInfo = {
   x: number
@@ -618,6 +639,7 @@ export default function IngredientSimilarityPlot() {
           onInitialized={(_figure, el) => {
             const gd = el as GraphDiv
             graphDivRef.current = gd
+            logSimilarityCameraDebugBanner()
             attachWheelZoom(gd)
             cameraDebugCleanupRef.current?.()
             cameraDebugCleanupRef.current =
