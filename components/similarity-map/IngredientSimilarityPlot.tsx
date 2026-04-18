@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import createPlotlyComponent from 'react-plotly.js/factory'
 import type { Config, Data, Layout, PlotHoverEvent } from 'plotly.js'
@@ -51,6 +51,10 @@ const CATEGORY_COLORS: Record<IngredientCategory, string> = {
 
 /** Wheel zoom factor per notch (closer to 1 = gentler). */
 const WHEEL_ZOOM_STEP = 1.09
+
+/** Log `scene.camera` on every relayout / relayouting (orbit, zoom). Set in `.env.local`: `NEXT_PUBLIC_SIMILARITY_MAP_CAMERA_DEBUG=true` */
+const CAMERA_DEBUG_LOG =
+  process.env.NEXT_PUBLIC_SIMILARITY_MAP_CAMERA_DEBUG === 'true'
 
 type TooltipInfo = {
   x: number
@@ -128,7 +132,7 @@ const config: Partial<Config> = {
 }
 
 /** Eye distance from orbit center in data units (larger = more zoomed out). */
-const CAMERA_START_DISTANCE = 2.38
+const CAMERA_START_DISTANCE = 1.75
 
 /**
  * Stronger overhead (+z) with a modest +x/+y offset: reads as “higher” orbit so
@@ -369,6 +373,110 @@ function trySyncSceneCamera(
   void PlotlyGL.relayout(gd, buildSceneCameraFlatPatch(points))
 }
 
+type PlotlyGraphDivEvents = GraphDiv & {
+  on: (ev: string, fn: () => void) => void
+  removeListener: (ev: string, fn: () => void) => void
+}
+
+let cameraDebugRafId = 0
+
+function logSimilaritySceneCameraNow(gd: GraphDiv) {
+  const cam = gd._fullLayout?.scene?.camera ?? gd.layout?.scene?.camera
+  if (cam === undefined) return
+  const c = cam.center
+  const e = cam.eye
+  if (
+    c === undefined ||
+    e === undefined ||
+    typeof c.x !== 'number' ||
+    typeof c.y !== 'number' ||
+    typeof c.z !== 'number' ||
+    typeof e.x !== 'number' ||
+    typeof e.y !== 'number' ||
+    typeof e.z !== 'number'
+  ) {
+    return
+  }
+
+  const vx = e.x - c.x
+  const vy = e.y - c.y
+  const vz = e.z - c.z
+  const dist = Math.hypot(vx, vy, vz)
+  const rawUp = cam.up
+  const up = {
+    x: rawUp !== undefined && typeof rawUp.x === 'number' ? rawUp.x : 0,
+    y: rawUp !== undefined && typeof rawUp.y === 'number' ? rawUp.y : 0,
+    z: rawUp !== undefined && typeof rawUp.z === 'number' ? rawUp.z : 1,
+  }
+
+  const snap = {
+    'scene.camera.center': { x: c.x, y: c.y, z: c.z },
+    'scene.camera.eye': { x: e.x, y: e.y, z: e.z },
+    'scene.camera.up': up,
+  }
+
+  console.log(
+    '[SimilarityMap camera] snapshot\n' + JSON.stringify(snap, null, 2)
+  )
+
+  console.log(
+    '[SimilarityMap camera] copy into IngredientSimilarityPlot (set CAMERA_START_DISTANCE to dist; return value = eye−center):\n' +
+      `const CAMERA_START_DISTANCE = ${dist.toFixed(6)}\n` +
+      `return { x: ${vx.toFixed(6)}, y: ${vy.toFixed(6)}, z: ${vz.toFixed(6)} }\n` +
+      `// optional explicit center for umapLookAt / computeSceneCamera:\n` +
+      `// { x: ${c.x.toFixed(6)}, y: ${c.y.toFixed(6)}, z: ${c.z.toFixed(6)} }`
+  )
+
+  const flat = {
+    'scene.camera.center.x': c.x,
+    'scene.camera.center.y': c.y,
+    'scene.camera.center.z': c.z,
+    'scene.camera.eye.x': e.x,
+    'scene.camera.eye.y': e.y,
+    'scene.camera.eye.z': e.z,
+    'scene.camera.up.x': up.x,
+    'scene.camera.up.y': up.y,
+    'scene.camera.up.z': up.z,
+  }
+  console.log(
+    '[SimilarityMap camera] flat relayout keys\n' +
+      JSON.stringify(flat, null, 2)
+  )
+}
+
+function scheduleSimilarityCameraDebugLog(gd: GraphDiv) {
+  if (!CAMERA_DEBUG_LOG) return
+  if (cameraDebugRafId !== 0) cancelAnimationFrame(cameraDebugRafId)
+  cameraDebugRafId = requestAnimationFrame(() => {
+    cameraDebugRafId = 0
+    logSimilaritySceneCameraNow(gd)
+  })
+}
+
+/** Subscribe to Plotly camera updates; call returned fn on purge / unmount. */
+function attachSimilarityCameraDebugLog(
+  gd: GraphDiv
+): (() => void) | undefined {
+  if (!CAMERA_DEBUG_LOG) return undefined
+  const el = gd as PlotlyGraphDivEvents
+  const onRelayout = () => {
+    logSimilaritySceneCameraNow(gd)
+  }
+  const onRelayouting = () => {
+    scheduleSimilarityCameraDebugLog(gd)
+  }
+  el.on('plotly_relayout', onRelayout)
+  el.on('plotly_relayouting', onRelayouting)
+  return () => {
+    if (cameraDebugRafId !== 0) {
+      cancelAnimationFrame(cameraDebugRafId)
+      cameraDebugRafId = 0
+    }
+    el.removeListener('plotly_relayout', onRelayout)
+    el.removeListener('plotly_relayouting', onRelayouting)
+  }
+}
+
 export default function IngredientSimilarityPlot() {
   const router = useRouter()
   const [points, setPoints] = useState<SimilarityPoint[]>([])
@@ -380,9 +488,12 @@ export default function IngredientSimilarityPlot() {
   const plotShellRef = useRef<HTMLDivElement>(null)
   const graphDivRef = useRef<GraphDiv | null>(null)
   const wheelCleanupRef = useRef<(() => void) | null>(null)
+  const cameraDebugCleanupRef = useRef<(() => void) | null>(null)
   const appliedCameraSigRef = useRef<string | null>(null)
 
-  pointsRef.current = points
+  useLayoutEffect(() => {
+    pointsRef.current = points
+  }, [points])
 
   useEffect(() => {
     fetch('/api/similarity-map', {
@@ -401,6 +512,8 @@ export default function IngredientSimilarityPlot() {
     return () => {
       wheelCleanupRef.current?.()
       wheelCleanupRef.current = null
+      cameraDebugCleanupRef.current?.()
+      cameraDebugCleanupRef.current = null
     }
   }, [])
 
@@ -473,6 +586,8 @@ export default function IngredientSimilarityPlot() {
     appliedCameraSigRef.current = null
     wheelCleanupRef.current?.()
     wheelCleanupRef.current = null
+    cameraDebugCleanupRef.current?.()
+    cameraDebugCleanupRef.current = null
     graphDivRef.current = null
   }
 
@@ -504,9 +619,13 @@ export default function IngredientSimilarityPlot() {
             const gd = el as GraphDiv
             graphDivRef.current = gd
             attachWheelZoom(gd)
+            cameraDebugCleanupRef.current?.()
+            cameraDebugCleanupRef.current =
+              attachSimilarityCameraDebugLog(gd) ?? null
             requestAnimationFrame(() => {
               requestAnimationFrame(() => {
                 trySyncSceneCamera(gd, pointsRef.current, appliedCameraSigRef)
+                if (CAMERA_DEBUG_LOG) logSimilaritySceneCameraNow(gd)
               })
             })
           }}
