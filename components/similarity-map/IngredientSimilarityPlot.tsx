@@ -127,37 +127,18 @@ const config: Partial<Config> = {
   scrollZoom: false,
 }
 
-/** Eye distance from the data centroid (larger = more zoomed out). */
-const CAMERA_START_DISTANCE = 1.42
+/** Eye distance from orbit center in data units (larger = more zoomed out). */
+const CAMERA_START_DISTANCE = 1.38
 
 /**
- * Small yaw around +Z after choosing an elevated direction — keeps a slight
- * diagonal instead of a pure “top-down” line through the centroid.
- */
-const CAMERA_PREORBIT_YAW_Z_RAD = 0.38
-
-function rotateAroundZ(
-  v: { x: number; y: number; z: number },
-  rad: number
-): { x: number; y: number; z: number } {
-  const c = Math.cos(rad)
-  const s = Math.sin(rad)
-  return {
-    x: v.x * c - v.y * s,
-    y: v.x * s + v.y * c,
-    z: v.z,
-  }
-}
-
-/**
- * Start clearly above the cloud (large z vs x,y) so you do not need to orbit
- * upward first; then a modest yaw for framing.
+ * Slight diagonal, close to Plotly’s default (1.25³): keeps the cloud near the
+ * viewport middle; a modest +z gives a bit of overview without steep clipping.
  */
 function initialCameraViewDir(): { x: number; y: number; z: number } {
-  const elevated = { x: 0.68, y: 0.78, z: 1.82 }
-  return rotateAroundZ(elevated, CAMERA_PREORBIT_YAW_Z_RAD)
+  return { x: 1.18, y: 1.12, z: 1.08 }
 }
 
+/** Arithmetic mean — used as zoom fallback when layout has no camera.center. */
 function meanUmapCenter(pts: readonly SimilarityPoint[]): {
   x: number
   y: number
@@ -176,8 +157,42 @@ function meanUmapCenter(pts: readonly SimilarityPoint[]): {
   return { x: sx / n, y: sy / n, z: sz / n }
 }
 
+/**
+ * Midpoint of the UMAP axis ranges — matches the visual “middle” of the cloud
+ * better than the mean when clusters are uneven (e.g. one large category).
+ * Orbit + look-at should use this so the first frame is centered.
+ */
+function umapBBoxCenter(pts: readonly SimilarityPoint[]): {
+  x: number
+  y: number
+  z: number
+} {
+  if (pts.length === 0) return { x: 0, y: 0, z: 0 }
+  const u0 = pts[0].umap
+  let minX = u0[0]
+  let maxX = u0[0]
+  let minY = u0[1]
+  let maxY = u0[1]
+  let minZ = u0[2]
+  let maxZ = u0[2]
+  for (const p of pts) {
+    const u = p.umap
+    if (u[0] < minX) minX = u[0]
+    if (u[0] > maxX) maxX = u[0]
+    if (u[1] < minY) minY = u[1]
+    if (u[1] > maxY) maxY = u[1]
+    if (u[2] < minZ) minZ = u[2]
+    if (u[2] > maxZ) maxZ = u[2]
+  }
+  return {
+    x: (minX + maxX) / 2,
+    y: (minY + maxY) / 2,
+    z: (minZ + maxZ) / 2,
+  }
+}
+
 function buildPlotLayout(points: readonly SimilarityPoint[]): Partial<Layout> {
-  const c = meanUmapCenter(points)
+  const c = umapBBoxCenter(points)
   const dir = initialCameraViewDir()
   const inv = 1 / Math.hypot(dir.x, dir.y, dir.z)
   const step = CAMERA_START_DISTANCE * inv
@@ -195,9 +210,9 @@ function buildPlotLayout(points: readonly SimilarityPoint[]): Partial<Layout> {
     scene: {
       bgcolor: '#141720',
       dragmode: 'orbit',
-      /* Slightly widen x vs z so the projection uses horizontal space better. */
-      aspectmode: 'manual',
-      aspectratio: { x: 1.12, y: 1, z: 0.78 },
+      /* Match axis proportions to real UMAP ranges — avoids skewed projection
+       * that pushed the cloud to a corner with manual aspectratio. */
+      aspectmode: 'data',
       domain: { x: [0, 1], y: [0, 1] },
       xaxis: { ...sceneAxis },
       yaxis: { ...sceneAxis },
