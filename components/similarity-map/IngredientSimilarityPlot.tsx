@@ -128,14 +128,14 @@ const config: Partial<Config> = {
 }
 
 /** Eye distance from orbit center in data units (larger = more zoomed out). */
-const CAMERA_START_DISTANCE = 2.78
+const CAMERA_START_DISTANCE = 2.38
 
 /**
- * View from “above + right” in data space (+x, +y, +z); stronger +z for a
- * higher vantage so more of the cloud fits without edge clipping.
+ * Stronger overhead (+z) with a modest +x/+y offset: reads as “higher” orbit so
+ * the cloud sits more centered vertically and less glued to the top edge.
  */
 function initialCameraViewDir(): { x: number; y: number; z: number } {
-  return { x: 1.38, y: 1.34, z: 1.62 }
+  return { x: 1.18, y: 1.14, z: 2.02 }
 }
 
 /** Arithmetic mean — used as zoom fallback when layout has no camera.center. */
