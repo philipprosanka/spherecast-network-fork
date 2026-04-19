@@ -35,4 +35,4 @@ Challenge given by [Spherecast](https://www.spherecast.ai). Pitch Deck: [spherec
 | **Frontend** | Next.js 16 · React 19 · TypeScript · Tailwind 4 · shadcn/ui · Vercel |
 | **Backend** | Python · FastAPI · ChromaDB · OpenAI o4-mini · See [`backend/README.md`](./backend/README.md) |
 | **Data** | Supabase (Postgres + pgvector) · Deck.gl · Plotly gl3d · MapLibre |
-| **MCP** | Agnes MCP server — direct access to sourcing intelligence · See [`backend/MCP.md`](./backend/MCP.md) |
+| **MCP** | Spherecast MCP Server — direct access to sourcing intelligence · See [`mcp-server/README.md`](./mcp-server/README.md) |
