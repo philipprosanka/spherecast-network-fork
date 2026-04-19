@@ -1,3 +1,7 @@
+<div align="center">
+  <img width="480" alt="spherecast-network" src="https://github.com/user-attachments/assets/4928f30c-3d52-477b-bcf0-a1ad0421153e" />
+</div>
+
 # Spherecast Network
 
 Monorepo for the **Spherecast Network** sourcing and network dashboard.
