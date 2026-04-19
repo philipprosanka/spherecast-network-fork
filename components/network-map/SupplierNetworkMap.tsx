@@ -11,16 +11,28 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import { ArcLayer, ScatterplotLayer } from '@deck.gl/layers'
-import type { Layer } from '@deck.gl/core'
+import type { Layer, PickingInfo } from '@deck.gl/core'
 import { DropdownMenu } from 'radix-ui'
 import { cartoDarkMatterStyle } from '@/components/network-map/carto-dark-matter-style'
 import type { NetworkMapArc, NetworkMapNode } from '@/lib/network-map-data'
 
-function DeckGLOverlay({ layers }: { layers: Layer[] }) {
+type TooltipInfo = {
+  x: number
+  y: number
+  node: NetworkMapNode
+}
+
+function DeckGLOverlay({
+  layers,
+  onHover,
+}: {
+  layers: Layer[]
+  onHover?: (info: PickingInfo) => void
+}) {
   const overlay = useControl<MapboxOverlay>(
     () => new MapboxOverlay({ interleaved: true, layers: [] })
   )
-  overlay.setProps({ layers })
+  overlay.setProps({ layers, onHover })
   return null
 }
 
@@ -81,6 +93,7 @@ export default function SupplierNetworkMap({
     NetworkMapCategory[]
   >([])
   const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([])
+  const [tooltip, setTooltip] = useState<TooltipInfo | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -274,9 +287,7 @@ export default function SupplierNetworkMap({
       new ScatterplotLayer<NetworkMapNode>({
         id: 'network-nodes',
         data: nodes,
-        // Node picking is currently unused (no tooltip/click handler) and can
-        // interfere with map drag gestures when Deck events sit above MapLibre.
-        pickable: false,
+        pickable: !preview,
         radiusUnits: 'pixels',
         radiusMinPixels: preview ? 4 : 3,
         radiusMaxPixels: preview ? 11 : 12,
@@ -503,7 +514,18 @@ export default function SupplierNetworkMap({
         maplibreLogo={false}
         style={{ width: '100%', height: '100%' }}
       >
-        <DeckGLOverlay layers={layers} />
+        <DeckGLOverlay
+          layers={layers}
+          onHover={(info: PickingInfo) => {
+            if (isPreview) return
+            const node = info.object as NetworkMapNode | undefined
+            if (node && info.x !== undefined && info.y !== undefined) {
+              setTooltip({ x: info.x, y: info.y, node })
+            } else {
+              setTooltip(null)
+            }
+          }}
+        />
         {!isPreview && (
           <NavigationControl
             position="top-right"
@@ -553,6 +575,21 @@ export default function SupplierNetworkMap({
           <div className="map-legend-row">
             <span className="map-legend-line" />
             <span>{arcCount} connections</span>
+          </div>
+        </div>
+      )}
+
+      {tooltip && (
+        <div
+          className="similarity-map-tooltip"
+          style={{
+            '--tip-x': `${tooltip.x + 16}px`,
+            '--tip-y': `${tooltip.y - 8}px`,
+          } as React.CSSProperties}
+        >
+          <div className="similarity-map-tooltip-name">{tooltip.node.name}</div>
+          <div className="similarity-map-tooltip-meta">
+            {tooltip.node.kind === 'customer' ? 'Brand' : 'Supplier'}
           </div>
         </div>
       )}
