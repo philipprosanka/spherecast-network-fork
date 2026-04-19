@@ -98,7 +98,7 @@ export default function Sidebar({
   suppliersBadge,
 }: SidebarProps) {
   const pathname = usePathname()
-  const { viewer, toggle } = useViewer()
+  const { viewer } = useViewer()
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     intelligence: true,
     sourcing: true,
@@ -225,12 +225,8 @@ export default function Sidebar({
         })}
       </nav>
 
-      {/* Viewer */}
-      <div
-        className="viewer-footer"
-        onClick={toggle}
-        style={{ cursor: 'pointer' }}
-      >
+      {/* Workspace label (display only) */}
+      <div className="viewer-footer">
         <span className="viewer-org">{viewer.orgName}</span>
         <span className="viewer-role">
           {viewer.role === 'customer' ? 'Customer view' : 'Spherecast admin'}

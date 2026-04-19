@@ -178,6 +178,83 @@ textarea {
   margin-bottom: 10px;
 }
 
+/* Sourcing list + map taskpane: no page scroll — only table card or body scrolls */
+.app-main-scroll:has(.sourcing-page-root) {
+  overflow: hidden;
+}
+
+.app-main-scroll:has(.sourcing-page-root) .app-main-inner {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main-scroll:has(.sourcing-page-root) .page-header {
+  flex-shrink: 0;
+}
+
+.sourcing-page-root {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main-scroll:has(.sourcing-page-root) .data-table-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-main-scroll:has(.sourcing-page-root) .data-table-toolbar,
+.app-main-scroll:has(.sourcing-page-root) .data-table-head {
+  flex-shrink: 0;
+}
+
+.app-main-scroll:has(.sourcing-page-root) .data-table-body {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
+
+/* Product detail (map drawer): stats fixed, ingredients list scrolls inside section */
+.app-main-scroll:has(.sourcing-page-root) .sourcing-page-body {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-main-scroll:has(.sourcing-page-root) .sourcing-page-body > .stat-row {
+  flex-shrink: 0;
+}
+
+.app-main-scroll:has(.sourcing-page-root) .detail-back {
+  flex-shrink: 0;
+}
+
+.app-main-scroll:has(.sourcing-page-root) .detail-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-main-scroll:has(.sourcing-page-root) .detail-list {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
+
 /* ── App top navigation (global search + company scope) ─────── */
 .app-top-nav {
   position: sticky;
@@ -666,10 +743,6 @@ textarea {
   flex-direction: column;
   padding: 10px 16px 12px;
   border-top: 1px solid var(--border);
-}
-
-.viewer-footer:hover .viewer-org {
-  color: var(--text-primary);
 }
 
 .viewer-avatar {
