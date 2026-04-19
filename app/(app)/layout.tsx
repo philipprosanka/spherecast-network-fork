@@ -3,7 +3,6 @@ import AppTopNav from '@/components/layout/AppTopNav'
 import MapRightSidebar from '@/components/network-map/MapRightSidebar'
 import { MapSidebarProvider } from '@/components/network-map/map-sidebar-context'
 import { CompanyScopeProvider } from '@/lib/company-scope-context'
-import { ViewerProvider } from '@/lib/viewer-context'
 import { resolveCompanyScopeFilter } from '@/lib/company-scope-server'
 import {
   getCompanyPickerList,
@@ -26,29 +25,27 @@ export default async function AppLayout({
   ])
 
   return (
-    <ViewerProvider>
-      <CompanyScopeProvider
-        key={String(scopeCompanyId ?? 'all')}
-        companies={pickerCompanies}
-        initialCompanyId={scopeCompanyId}
-      >
-        <MapSidebarProvider>
-          <div className="app-shell">
-            <Sidebar
-              productsBadge={counts.finishedGoods}
-              rawMaterialsBadge={counts.rawMaterials}
-              suppliersBadge={counts.suppliers}
-            />
-            <main className="app-main">
-              <div className="app-main-scroll app-main-chrome-bg">
-                <AppTopNav searchItems={searchItems} />
-                <div className="app-main-inner">{children}</div>
-              </div>
-              <MapRightSidebar />
-            </main>
-          </div>
-        </MapSidebarProvider>
-      </CompanyScopeProvider>
-    </ViewerProvider>
+    <CompanyScopeProvider
+      key={String(scopeCompanyId ?? 'all')}
+      companies={pickerCompanies}
+      initialCompanyId={scopeCompanyId}
+    >
+      <MapSidebarProvider>
+        <div className="app-shell">
+          <Sidebar
+            productsBadge={counts.finishedGoods}
+            rawMaterialsBadge={counts.rawMaterials}
+            suppliersBadge={counts.suppliers}
+          />
+          <main className="app-main">
+            <div className="app-main-scroll app-main-chrome-bg">
+              <AppTopNav searchItems={searchItems} />
+              <div className="app-main-inner">{children}</div>
+            </div>
+            <MapRightSidebar />
+          </main>
+        </div>
+      </MapSidebarProvider>
+    </CompanyScopeProvider>
   )
 }

@@ -14,8 +14,6 @@ import {
   FileText,
   ChevronDown,
 } from 'lucide-react'
-import { useViewer } from '@/lib/viewer-context'
-
 interface SidebarProps {
   productsBadge?: number
   rawMaterialsBadge?: number
@@ -98,7 +96,6 @@ export default function Sidebar({
   suppliersBadge,
 }: SidebarProps) {
   const pathname = usePathname()
-  const { viewer } = useViewer()
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     intelligence: true,
     sourcing: true,
@@ -225,12 +222,9 @@ export default function Sidebar({
         })}
       </nav>
 
-      {/* Workspace label (display only) */}
       <div className="viewer-footer">
-        <span className="viewer-org">{viewer.orgName}</span>
-        <span className="viewer-role">
-          {viewer.role === 'customer' ? 'Customer view' : 'Spherecast admin'}
-        </span>
+        <span className="viewer-org">Test User</span>
+        <span className="viewer-role">Hackathon Member</span>
       </div>
     </aside>
   )
