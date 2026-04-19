@@ -24,7 +24,7 @@ export async function GET() {
   const p = new URLSearchParams()
   if (scopeCompanyId != null) p.set('scope_company_id', String(scopeCompanyId))
   
-  const res = await agnesGet('/similarity-map', p)
+  const res = await agnesGet('/similarity-map-data', p)
   if (!res.ok) {
     return NextResponse.json({ error: 'Failed to fetch similarity map data from Agnes' }, { status: 500 })
   }
