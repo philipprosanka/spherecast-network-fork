@@ -93,8 +93,8 @@ type GraphDiv = HTMLElement & {
 
 /** Marker radius in px: stronger spread by `companyCount` (more companies → larger). */
 function sizeForCount(count: number, minC: number, maxC: number): number {
-  if (maxC <= minC) return 16
-  const minSize = 3
+  if (maxC <= minC) return 18
+  const minSize = 6
   const maxSize = 30
   return minSize + ((count - minC) / (maxC - minC)) * (maxSize - minSize)
 }
