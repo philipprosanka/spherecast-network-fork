@@ -16,17 +16,36 @@ const SupplierNetworkMap = dynamic(
   }
 )
 
+const IngredientSimilarityPlot = dynamic(
+  () => import('@/components/similarity-map/IngredientSimilarityPlot'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="map-right-sidebar-map-loading map-right-sidebar-map-loading--plot">
+        Loading 3D map…
+      </div>
+    ),
+  }
+)
+
+function panelAriaLabel(panel: 'off' | 'network' | 'similarity'): string {
+  if (panel === 'network') return 'Supplier network map'
+  if (panel === 'similarity') return 'Ingredient similarity map'
+  return ''
+}
+
 /** Full-viewport-height right rail; width persisted in localStorage. */
 export default function MapRightSidebar() {
   const { companyId } = useCompanyScope()
-  const { active, isOpen, sidebarWidthPx, setSidebarWidthPx } = useMapSidebar()
+  const { active, panel, isPanelOpen, sidebarWidthPx, setSidebarWidthPx } =
+    useMapSidebar()
   const [isResizing, setIsResizing] = useState(false)
   const dragRef = useRef<{ startX: number; startW: number } | null>(null)
   const pendingWidthRef = useRef(sidebarWidthPx)
 
   const onResizePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      if (!isOpen) {
+      if (!isPanelOpen) {
         return
       }
       e.preventDefault()
@@ -35,7 +54,7 @@ export default function MapRightSidebar() {
       setIsResizing(true)
       e.currentTarget.setPointerCapture(e.pointerId)
     },
-    [isOpen, sidebarWidthPx]
+    [isPanelOpen, sidebarWidthPx]
   )
 
   const onResizePointerMove = useCallback(
@@ -75,19 +94,19 @@ export default function MapRightSidebar() {
 
   return (
     <aside
-      className={`map-right-sidebar${isOpen ? ' is-open' : ''}`}
+      className={`map-right-sidebar${isPanelOpen ? ' is-open' : ''}`}
       style={{
-        width: isOpen ? sidebarWidthPx : 0,
+        width: isPanelOpen ? sidebarWidthPx : 0,
         transition: isResizing ? 'none' : 'width 0.22s ease',
       }}
-      aria-hidden={!isOpen}
-      aria-label={isOpen ? 'Supplier network map' : undefined}
+      aria-hidden={isPanelOpen ? 'false' : 'true'}
+      aria-label={isPanelOpen ? panelAriaLabel(panel) : undefined}
     >
       <div
-        className={`map-right-sidebar-inner${isOpen ? ' app-main-chrome-bg' : ''}`}
+        className={`map-right-sidebar-inner${isPanelOpen ? ' app-main-chrome-bg' : ''}`}
       >
         <div className="map-right-sidebar-map">
-          {isOpen ? (
+          {isPanelOpen ? (
             <>
               <div
                 className="map-right-sidebar-map-resize-edge"
@@ -100,10 +119,16 @@ export default function MapRightSidebar() {
                 aria-orientation="vertical"
                 aria-label="Resize map panel"
               />
-              <SupplierNetworkMap
-                key={companyId ?? 'all'}
-                companyId={companyId}
-              />
+              {panel === 'network' ? (
+                <SupplierNetworkMap
+                  key={companyId ?? 'all'}
+                  companyId={companyId}
+                />
+              ) : (
+                <div className="map-right-sidebar-similarity">
+                  <IngredientSimilarityPlot key={companyId ?? 'all'} />
+                </div>
+              )}
             </>
           ) : null}
         </div>

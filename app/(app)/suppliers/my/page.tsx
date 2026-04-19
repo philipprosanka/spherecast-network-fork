@@ -1,5 +1,5 @@
 import PageHeader from '@/components/layout/PageHeader'
-import MapSidebarToggle from '@/components/network-map/MapSidebarToggle'
+import MapRightPanelSwitch from '@/components/network-map/MapRightPanelSwitch'
 import PageMapDrawer from '@/components/network-map/PageMapDrawer'
 import SuppliersTable from '@/components/sourcing/SuppliersTable'
 import { resolveCompanyScopeFilter } from '@/lib/company-scope-server'
@@ -15,7 +15,7 @@ export default async function MySuppliersPage() {
         eyebrow="Sourcing · Suppliers"
         title="My Suppliers"
         description="All qualified suppliers — each count is distinct raw-material SKU links in the graph (no volumes or spend)."
-        actions={<MapSidebarToggle />}
+        actions={<MapRightPanelSwitch />}
       />
 
       <SuppliersTable rows={rows} />

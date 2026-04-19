@@ -16,24 +16,28 @@ import {
   MAP_SIDEBAR_DEFAULT_PX,
 } from '@/lib/map-sidebar-width'
 
+export type MapRightPanel = 'off' | 'network' | 'similarity'
+
 export type MapSidebarContextValue = {
   /** A sourcing page registered the map scope */
   active: boolean
-  isOpen: boolean
+  /** Which view occupies the right taskpane when not `off` */
+  panel: MapRightPanel
+  /** `true` when `panel` is `network` or `similarity` */
+  isPanelOpen: boolean
   sidebarWidthPx: number
   /** When `persist` is false (e.g. while dragging), width updates only in memory. */
   setSidebarWidthPx: (width: number, persist?: boolean) => void
   enable: () => void
   disable: () => void
-  toggle: () => void
-  setOpen: (open: boolean) => void
+  setPanel: (panel: MapRightPanel) => void
 }
 
 const MapSidebarContext = createContext<MapSidebarContextValue | null>(null)
 
 export function MapSidebarProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState(false)
-  const [isOpen, setIsOpen] = useState(false)
+  const [panel, setPanelState] = useState<MapRightPanel>('off')
   const [sidebarWidthPx, setSidebarWidthPxState] = useState(
     MAP_SIDEBAR_DEFAULT_PX
   )
@@ -51,15 +55,11 @@ export function MapSidebarProvider({ children }: { children: ReactNode }) {
 
   const disable = useCallback(() => {
     setActive(false)
-    setIsOpen(false)
+    setPanelState('off')
   }, [])
 
-  const toggle = useCallback(() => {
-    setIsOpen((o) => !o)
-  }, [])
-
-  const setOpen = useCallback((open: boolean) => {
-    setIsOpen(open)
+  const setPanel = useCallback((next: MapRightPanel) => {
+    setPanelState(next)
   }, [])
 
   const setSidebarWidthPx = useCallback(
@@ -73,26 +73,28 @@ export function MapSidebarProvider({ children }: { children: ReactNode }) {
     []
   )
 
+  const isPanelOpen = panel !== 'off'
+
   const value = useMemo<MapSidebarContextValue>(
     () => ({
       active,
-      isOpen,
+      panel,
+      isPanelOpen,
       sidebarWidthPx,
       setSidebarWidthPx,
       enable,
       disable,
-      toggle,
-      setOpen,
+      setPanel,
     }),
     [
       active,
-      isOpen,
+      panel,
+      isPanelOpen,
       sidebarWidthPx,
       setSidebarWidthPx,
       enable,
       disable,
-      toggle,
-      setOpen,
+      setPanel,
     ]
   )
 

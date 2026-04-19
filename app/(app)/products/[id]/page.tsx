@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/layout/PageHeader'
-import MapSidebarToggle from '@/components/network-map/MapSidebarToggle'
+import MapRightPanelSwitch from '@/components/network-map/MapRightPanelSwitch'
 import PageMapDrawer from '@/components/network-map/PageMapDrawer'
 import { getFinishedGoodDetail } from '@/lib/queries'
 import { bomLinesCount } from '@/lib/format-labels'
@@ -29,7 +29,7 @@ export default async function FinishedGoodDetailPage({ params }: Props) {
         eyebrow="Finished good"
         title={product.sku}
         description={`Owned by ${product.companyName} · ${product.ingredientCount} BOM ingredient${product.ingredientCount !== 1 ? 's' : ''}`}
-        actions={<MapSidebarToggle />}
+        actions={<MapRightPanelSwitch />}
       />
 
       <div

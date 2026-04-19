@@ -1,5 +1,5 @@
 import PageHeader from '@/components/layout/PageHeader'
-import MapSidebarToggle from '@/components/network-map/MapSidebarToggle'
+import MapRightPanelSwitch from '@/components/network-map/MapRightPanelSwitch'
 import PageMapDrawer from '@/components/network-map/PageMapDrawer'
 import RawMaterialsTable from '@/components/sourcing/RawMaterialsTable'
 import { resolveCompanyScopeFilter } from '@/lib/company-scope-server'
@@ -15,7 +15,7 @@ export default async function RawMaterialsPage() {
         eyebrow="Sourcing"
         title="Raw Materials"
         description="All ingredients in the Spherecast network — supplier coverage, BOM usage, and consolidation potential."
-        actions={<MapSidebarToggle />}
+        actions={<MapRightPanelSwitch />}
       />
 
       <RawMaterialsTable rows={rows} />

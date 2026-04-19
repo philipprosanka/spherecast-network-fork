@@ -1,5 +1,5 @@
 import PageHeader from '@/components/layout/PageHeader'
-import MapSidebarToggle from '@/components/network-map/MapSidebarToggle'
+import MapRightPanelSwitch from '@/components/network-map/MapRightPanelSwitch'
 import PageMapDrawer from '@/components/network-map/PageMapDrawer'
 import ProductsTable from '@/components/sourcing/ProductsTable'
 import { resolveCompanyScopeFilter } from '@/lib/company-scope-server'
@@ -15,7 +15,7 @@ export default async function ProductsPage() {
         eyebrow="Sourcing"
         title="Products"
         description="All finished goods in the Spherecast network — click a product to inspect its BOM and linked raw materials."
-        actions={<MapSidebarToggle />}
+        actions={<MapRightPanelSwitch />}
       />
 
       <ProductsTable rows={rows} />
