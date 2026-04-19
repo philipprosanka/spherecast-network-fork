@@ -32,62 +32,64 @@ export default async function FinishedGoodDetailPage({ params }: Props) {
         actions={<MapRightPanelSwitch />}
       />
 
-      <div
-        className="stat-row"
-        style={{ gridTemplateColumns: 'repeat(2, 1fr)', marginBottom: 28 }}
-      >
-        <div className="stat-card">
-          <div className="stat-label">Brand</div>
-          <div className="stat-value" style={{ fontSize: 18 }}>
-            <Link
-              href={`/companies/${product.companyId}`}
-              className="detail-link"
-            >
-              {product.companyName}
-            </Link>
+      <div className="sourcing-page-body">
+        <div
+          className="stat-row"
+          style={{ gridTemplateColumns: 'repeat(2, 1fr)', marginBottom: 28 }}
+        >
+          <div className="stat-card">
+            <div className="stat-label">Brand</div>
+            <div className="stat-value" style={{ fontSize: 18 }}>
+              <Link
+                href={`/companies/${product.companyId}`}
+                className="detail-link"
+              >
+                {product.companyName}
+              </Link>
+            </div>
+            <div className="stat-delta">product owner</div>
           </div>
-          <div className="stat-delta">product owner</div>
+          <div className="stat-card">
+            <div className="stat-label">BOM ingredients</div>
+            <div className="stat-value">{product.ingredientCount}</div>
+            <div className="stat-delta">raw materials and intermediates</div>
+          </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-label">BOM ingredients</div>
-          <div className="stat-value">{product.ingredientCount}</div>
-          <div className="stat-delta">raw materials and intermediates</div>
-        </div>
-      </div>
 
-      <div className="detail-section">
-        <div className="detail-section-header">
-          <Atom size={14} />
-          <span>Ingredients</span>
-          <span className="data-badge data-badge-muted detail-section-count">
-            {bomLinesCount(product.ingredients.length)}
-          </span>
+        <div className="detail-section">
+          <div className="detail-section-header">
+            <Atom size={14} />
+            <span>Ingredients</span>
+            <span className="data-badge data-badge-muted detail-section-count">
+              {bomLinesCount(product.ingredients.length)}
+            </span>
+          </div>
+          {product.ingredients.length === 0 ? (
+            <div className="detail-empty">
+              No BOM is linked to this product yet.
+            </div>
+          ) : (
+            <div className="detail-list">
+              {product.ingredients.map((row) => {
+                const href =
+                  row.type === 'finished-good'
+                    ? `/products/${row.id}`
+                    : `/raw-materials/${row.id}`
+                return (
+                  <Link
+                    key={row.id}
+                    href={href}
+                    className="detail-list-row detail-list-row-link"
+                  >
+                    <Package size={13} aria-hidden style={{ flexShrink: 0 }} />
+                    <span className="data-sku">{row.sku}</span>
+                    <span className="detail-list-name">{row.companyName}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
         </div>
-        {product.ingredients.length === 0 ? (
-          <div className="detail-empty">
-            No BOM is linked to this product yet.
-          </div>
-        ) : (
-          <div className="detail-list">
-            {product.ingredients.map((row) => {
-              const href =
-                row.type === 'finished-good'
-                  ? `/products/${row.id}`
-                  : `/raw-materials/${row.id}`
-              return (
-                <Link
-                  key={row.id}
-                  href={href}
-                  className="detail-list-row detail-list-row-link"
-                >
-                  <Package size={13} aria-hidden style={{ flexShrink: 0 }} />
-                  <span className="data-sku">{row.sku}</span>
-                  <span className="detail-list-name">{row.companyName}</span>
-                </Link>
-              )
-            })}
-          </div>
-        )}
       </div>
     </PageMapDrawer>
   )
