@@ -39,8 +39,8 @@ function DeckGLOverlay({
 }
 
 const initialViewState = {
-  longitude: -20,
-  latitude: 48,
+  longitude: -30,
+  latitude: 30,
   zoom: 1.8,
   pitch: 40,
   bearing: -8,
@@ -122,10 +122,10 @@ export default function SupplierNetworkMap({
     ? (onControlledSuppliersChange ?? (() => {}))
     : setInternalSuppliers
   const [tooltip, setTooltip] = useState<TooltipInfo | null>(null)
-  
+
   const router = useRouter()
   const hideTimer = useRef<NodeJS.Timeout | null>(null)
-  
+
   const clearHideTimer = () => {
     if (hideTimer.current) {
       clearTimeout(hideTimer.current)
@@ -138,6 +138,10 @@ export default function SupplierNetworkMap({
     hideTimer.current = setTimeout(() => setTooltip(null), delay)
   }
 
+  const portalNode =
+    typeof document !== 'undefined'
+      ? document.getElementById('network-map-filters-portal')
+      : null
 
   useEffect(() => {
     let cancelled = false
@@ -272,11 +276,13 @@ export default function SupplierNetworkMap({
 
     const filteredArcs = bundle.arcs.filter((arc) => {
       const sourceNodes =
-        nodeByPosition.get(`${arc.sourcePosition[0]},${arc.sourcePosition[1]}`) ??
-        []
+        nodeByPosition.get(
+          `${arc.sourcePosition[0]},${arc.sourcePosition[1]}`
+        ) ?? []
       const targetNodes =
-        nodeByPosition.get(`${arc.targetPosition[0]},${arc.targetPosition[1]}`) ??
-        []
+        nodeByPosition.get(
+          `${arc.targetPosition[0]},${arc.targetPosition[1]}`
+        ) ?? []
       const endpoints = [...sourceNodes, ...targetNodes]
 
       if (endpoints.length === 0) return false
@@ -296,15 +302,21 @@ export default function SupplierNetworkMap({
 
     const connectedPositionKeys = new Set<string>()
     for (const arc of filteredArcs) {
-      connectedPositionKeys.add(`${arc.sourcePosition[0]},${arc.sourcePosition[1]}`)
-      connectedPositionKeys.add(`${arc.targetPosition[0]},${arc.targetPosition[1]}`)
+      connectedPositionKeys.add(
+        `${arc.sourcePosition[0]},${arc.sourcePosition[1]}`
+      )
+      connectedPositionKeys.add(
+        `${arc.targetPosition[0]},${arc.targetPosition[1]}`
+      )
     }
 
     const filteredNodes = bundle.nodes.filter((node) => {
       if (!matchesCategory(node)) return false
       if (!matchesSupplier(node)) return false
       if (connectedPositionKeys.size === 0) return true
-      return connectedPositionKeys.has(`${node.position[0]},${node.position[1]}`)
+      return connectedPositionKeys.has(
+        `${node.position[0]},${node.position[1]}`
+      )
     })
 
     return { nodes: filteredNodes, arcs: filteredArcs }
@@ -390,8 +402,8 @@ export default function SupplierNetworkMap({
       : effectiveCategories
           .map(
             (category) =>
-              categoryOptions.find((option) => option.key === category)?.label ??
-              category
+              categoryOptions.find((option) => option.key === category)
+                ?.label ?? category
           )
           .join(', ')
 
@@ -552,7 +564,7 @@ export default function SupplierNetworkMap({
         reuseMaps
         attributionControl={false}
         maplibreLogo={false}
-        style={{ width: '100%', height: '100%', flex: 1, minHeight: 0 }}
+        style={{ width: '100%', height: '100%' }}
       >
         <DeckGLOverlay
           layers={layers}
@@ -580,7 +592,9 @@ export default function SupplierNetworkMap({
         )}
       </Map>
 
-      {status === 'loading' && <div className="map-overlay-status">Loading…</div>}
+      {status === 'loading' && (
+        <div className="map-overlay-status">Loading…</div>
+      )}
       {status === 'empty' && (
         <div className="map-overlay-status">
           {companyId === null ? (
@@ -602,9 +616,13 @@ export default function SupplierNetworkMap({
         </div>
       )}
 
-      {status === 'live' && filteredBundle && filteredBundle.nodes.length === 0 && (
-        <div className="map-overlay-status">No nodes match the selected filters.</div>
-      )}
+      {status === 'live' &&
+        filteredBundle &&
+        filteredBundle.nodes.length === 0 && (
+          <div className="map-overlay-status">
+            No nodes match the selected filters.
+          </div>
+        )}
 
       {status === 'live' && !isPreview && (
         <div className="map-legend">
@@ -626,10 +644,12 @@ export default function SupplierNetworkMap({
       {tooltip && (
         <div
           className="similarity-map-tooltip"
-          style={{
-            '--tip-x': `${tooltip.x + 16}px`,
-            '--tip-y': `${tooltip.y - 8}px`,
-          } as React.CSSProperties}
+          style={
+            {
+              '--tip-x': `${tooltip.x + 16}px`,
+              '--tip-y': `${tooltip.y - 8}px`,
+            } as React.CSSProperties
+          }
           onMouseEnter={clearHideTimer}
           onMouseMove={clearHideTimer}
           onMouseLeave={() => scheduleHide(300)}
@@ -648,7 +668,9 @@ export default function SupplierNetworkMap({
               )
             }
           >
-            {tooltip.node.kind === 'customer' ? 'View Brand →' : 'View Supplier →'}
+            {tooltip.node.kind === 'customer'
+              ? 'View Brand →'
+              : 'View Supplier →'}
           </button>
         </div>
       )}
