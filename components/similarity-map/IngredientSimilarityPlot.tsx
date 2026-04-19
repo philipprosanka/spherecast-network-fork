@@ -152,15 +152,42 @@ const config: Partial<Config> = {
   scrollZoom: false,
 }
 
-/** Eye distance from orbit center in data units (larger = more zoomed out). */
-const CAMERA_START_DISTANCE = 1.75
-
 /**
- * Stronger overhead (+z) with a modest +x/+y offset: reads as “higher” orbit so
- * the cloud sits more centered vertically and less glued to the top edge.
+ * Hand-tuned default `scene.camera` (captured from Plotly debug). Eye offset
+ * must stay proportional so `normalize(dir) * CAMERA_START_DISTANCE === eye−center`.
  */
+const DEFAULT_SCENE_CAMERA_CENTER = {
+  x: 0.3810515789473685,
+  y: 0.05621723684210525,
+  z: -0.5309910526315795,
+} as const
+
+const DEFAULT_SCENE_CAMERA_EYE = {
+  x: 1.1090362884299452,
+  y: 0.7595244985456134,
+  z: 0.7152200602114753,
+} as const
+
+const DEFAULT_SCENE_EYE_OFFSET = {
+  x: DEFAULT_SCENE_CAMERA_EYE.x - DEFAULT_SCENE_CAMERA_CENTER.x,
+  y: DEFAULT_SCENE_CAMERA_EYE.y - DEFAULT_SCENE_CAMERA_CENTER.y,
+  z: DEFAULT_SCENE_CAMERA_EYE.z - DEFAULT_SCENE_CAMERA_CENTER.z,
+} as const
+
+/** Eye distance from orbit center in data units (= ‖eye − center‖ for default pose). */
+const CAMERA_START_DISTANCE = Math.hypot(
+  DEFAULT_SCENE_EYE_OFFSET.x,
+  DEFAULT_SCENE_EYE_OFFSET.y,
+  DEFAULT_SCENE_EYE_OFFSET.z
+)
+
+/** Unnormalized eye − center; `computeSceneCamera` normalizes and scales by `CAMERA_START_DISTANCE`. */
 function initialCameraViewDir(): { x: number; y: number; z: number } {
-  return { x: 1.18, y: 1.14, z: 2.02 }
+  return {
+    x: DEFAULT_SCENE_EYE_OFFSET.x,
+    y: DEFAULT_SCENE_EYE_OFFSET.y,
+    z: DEFAULT_SCENE_EYE_OFFSET.z,
+  }
 }
 
 /** Arithmetic mean — used as zoom fallback when layout has no camera.center. */
@@ -182,57 +209,6 @@ function meanUmapCenter(pts: readonly SimilarityPoint[]): {
   return { x: sx / n, y: sy / n, z: sz / n }
 }
 
-/**
- * Midpoint of the UMAP axis ranges — matches the visual “middle” of the cloud
- * better than the mean when clusters are uneven (e.g. one large category).
- * Orbit + look-at should use this so the first frame is centered.
- */
-function umapBBoxCenter(pts: readonly SimilarityPoint[]): {
-  x: number
-  y: number
-  z: number
-} {
-  if (pts.length === 0) return { x: 0, y: 0, z: 0 }
-  const u0 = pts[0].umap
-  let minX = u0[0]
-  let maxX = u0[0]
-  let minY = u0[1]
-  let maxY = u0[1]
-  let minZ = u0[2]
-  let maxZ = u0[2]
-  for (const p of pts) {
-    const u = p.umap
-    if (u[0] < minX) minX = u[0]
-    if (u[0] > maxX) maxX = u[0]
-    if (u[1] < minY) minY = u[1]
-    if (u[1] > maxY) maxY = u[1]
-    if (u[2] < minZ) minZ = u[2]
-    if (u[2] > maxZ) maxZ = u[2]
-  }
-  return {
-    x: (minX + maxX) / 2,
-    y: (minY + maxY) / 2,
-    z: (minZ + maxZ) / 2,
-  }
-}
-
-/** Look-at: blend bbox midpoint with mean so dense clusters pull the orbit center. */
-function umapLookAt(pts: readonly SimilarityPoint[]): {
-  x: number
-  y: number
-  z: number
-} {
-  if (pts.length === 0) return { x: 0, y: 0, z: 0 }
-  const b = umapBBoxCenter(pts)
-  const m = meanUmapCenter(pts)
-  const w = 0.58
-  return {
-    x: b.x * w + m.x * (1 - w),
-    y: b.y * w + m.y * (1 - w),
-    z: b.z * w + m.z * (1 - w),
-  }
-}
-
 function pointSetSignature(pts: readonly SimilarityPoint[]): string {
   if (pts.length === 0) return '0'
   if (pts.length <= 48) return `${pts.length}:${pts.map((p) => p.id).join('|')}`
@@ -247,7 +223,14 @@ type SceneCamera = {
 }
 
 function computeSceneCamera(points: readonly SimilarityPoint[]): SceneCamera {
-  const c = umapLookAt(points)
+  if (points.length === 0) {
+    return {
+      center: { x: 0, y: 0, z: 0 },
+      eye: { x: 0, y: 0, z: 1 },
+      up: { x: 0, y: 0, z: 1 },
+    }
+  }
+  const c = DEFAULT_SCENE_CAMERA_CENTER
   const dir = initialCameraViewDir()
   const inv = 1 / Math.hypot(dir.x, dir.y, dir.z)
   const step = CAMERA_START_DISTANCE * inv
@@ -444,7 +427,7 @@ function logSimilaritySceneCameraNow(gd: GraphDiv) {
     '[SimilarityMap camera] copy into IngredientSimilarityPlot (set CAMERA_START_DISTANCE to dist; return value = eye−center):\n' +
       `const CAMERA_START_DISTANCE = ${dist.toFixed(6)}\n` +
       `return { x: ${vx.toFixed(6)}, y: ${vy.toFixed(6)}, z: ${vz.toFixed(6)} }\n` +
-      `// optional explicit center for umapLookAt / computeSceneCamera:\n` +
+      `// optional explicit center (DEFAULT_SCENE_CAMERA_CENTER):\n` +
       `// { x: ${c.x.toFixed(6)}, y: ${c.y.toFixed(6)}, z: ${c.z.toFixed(6)} }`
   )
 
