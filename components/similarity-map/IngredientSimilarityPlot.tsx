@@ -476,6 +476,7 @@ export default function IngredientSimilarityPlot({
   const graphDivRef = useRef<GraphDiv | null>(null)
   const wheelCleanupRef = useRef<(() => void) | null>(null)
   const cameraDebugCleanupRef = useRef<(() => void) | null>(null)
+  const plotResizeObserverCleanupRef = useRef<(() => void) | null>(null)
   const appliedCameraSigRef = useRef<string | null>(null)
 
   useLayoutEffect(() => {
@@ -508,6 +509,8 @@ export default function IngredientSimilarityPlot({
       wheelCleanupRef.current = null
       cameraDebugCleanupRef.current?.()
       cameraDebugCleanupRef.current = null
+      plotResizeObserverCleanupRef.current?.()
+      plotResizeObserverCleanupRef.current = null
     }
   }, [])
 
@@ -582,6 +585,8 @@ export default function IngredientSimilarityPlot({
     wheelCleanupRef.current = null
     cameraDebugCleanupRef.current?.()
     cameraDebugCleanupRef.current = null
+    plotResizeObserverCleanupRef.current?.()
+    plotResizeObserverCleanupRef.current = null
     graphDivRef.current = null
   }
 
@@ -707,6 +712,21 @@ export default function IngredientSimilarityPlot({
                 cameraDebugCleanupRef.current?.()
                 cameraDebugCleanupRef.current =
                   attachSimilarityCameraDebugLog(gd) ?? null
+                plotResizeObserverCleanupRef.current?.()
+                plotResizeObserverCleanupRef.current = null
+                const shell = plotShellRef.current
+                if (shell !== null && typeof ResizeObserver !== 'undefined') {
+                  const ro = new ResizeObserver(() => {
+                    const g = graphDivRef.current
+                    if (g !== null) {
+                      void PlotlyGL.Plots.resize(g)
+                    }
+                  })
+                  ro.observe(shell)
+                  plotResizeObserverCleanupRef.current = () => {
+                    ro.disconnect()
+                  }
+                }
                 requestAnimationFrame(() => {
                   requestAnimationFrame(() => {
                     trySyncSceneCamera(
@@ -715,6 +735,7 @@ export default function IngredientSimilarityPlot({
                       appliedCameraSigRef
                     )
                     if (CAMERA_DEBUG_LOG) logSimilaritySceneCameraNow(gd)
+                    void PlotlyGL.Plots.resize(gd)
                   })
                 })
               }}
