@@ -7,6 +7,7 @@
 > Sourcing intelligence that finds the opportunities — before anyone asks.
 
 <img width="1700" height="884" alt="github-readme" src="https://github.com/user-attachments/assets/e3f16848-6b29-4c7a-88c3-8ac7f323d3a0" />
+<br />
 
 Spherecast customers buy the same ingredients from the same suppliers — without knowing it. **Agnes Network** runs continuously across all BOMs, identifies substitution and consolidation opportunities, scores them for compliance and supplier risk, and surfaces the best ones directly to the right teams.
 
@@ -15,6 +16,14 @@ No manual analysis. No spreadsheets. Recommendations arrive — customers act.
 When deeper questions come up, the **Agnes MCP server** gives direct, structured access to the full intelligence layer: ingredient profiles, substitution candidates, supplier fingerprints, and evidence trails — queryable from Claude, Cursor, or any MCP-compatible tool.
 
 Built initially as a **Spherecast-internal tool**, designed to extend to customers.
+
+---
+
+## Scope
+
+This project was created during the [TUM.ai Makeathon 2026](https://makeathon.tum-ai.com).  
+Challenge given by [Spherecast](https://www.spherecast.ai).
+
 
 ---
 
