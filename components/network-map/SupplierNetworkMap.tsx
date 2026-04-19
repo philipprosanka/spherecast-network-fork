@@ -106,8 +106,14 @@ export default function SupplierNetworkMap({
   const [internalSuppliers, setInternalSuppliers] = useState<string[]>([])
 
   const isControlled = controlledCategories !== undefined
-  const selectedCategories = isControlled ? controlledCategories : internalCategories
-  const selectedSuppliers = isControlled ? (controlledSuppliers ?? []) : internalSuppliers
+  const selectedSuppliers = useMemo(
+    () => (isControlled ? (controlledSuppliers ?? []) : internalSuppliers),
+    [isControlled, controlledSuppliers, internalSuppliers]
+  )
+  const selectedCategories = useMemo(
+    () => (isControlled ? controlledCategories : internalCategories),
+    [isControlled, controlledCategories, internalCategories]
+  )
 
   const setSelectedCategories = isControlled
     ? (onControlledCategoriesChange ?? (() => {}))
@@ -132,11 +138,9 @@ export default function SupplierNetworkMap({
     hideTimer.current = setTimeout(() => setTooltip(null), delay)
   }
 
-  const [portalNode, setPortalNode] = useState<HTMLElement | null>(() =>
-    typeof document !== 'undefined'
+  const portalNode = typeof document !== 'undefined'
       ? document.getElementById('network-map-filters-portal')
       : null
-  )
 
   useEffect(() => {
     let cancelled = false

@@ -4,7 +4,6 @@
  * For Client Components, use lib/agnes-client.ts instead.
  */
 import { agnesGet } from '@/lib/agnes-server'
-import { agnesPost } from '@/lib/agnes-server'
 import type {
   AgnesStats,
   AgnesCompany,
@@ -16,7 +15,6 @@ import type {
   AgnesSupplier,
   AgnesSupplierDetail,
   AgnesSearchItem,
-  AgnesRecommendation,
   AgnesRecommendationSubstitute,
   AgnesOpportunitiesResponse,
   AgnesOpportunity,
@@ -229,17 +227,7 @@ function clamp01(value: number): number {
   return value
 }
 
-function formatPct(value: number): string {
-  return `${Math.round(value * 100)}%`
-}
 
-function formatSavings(top: AgnesRecommendationSubstitute): string {
-  if (typeof top.co2_vs_original === 'number') {
-    const sign = top.co2_vs_original > 0 ? '+' : ''
-    return `CO2 delta: ${sign}${top.co2_vs_original.toFixed(2)} kg/kg`
-  }
-  return 'Savings estimate pending'
-}
 
 function toOpportunityCategory(functionalClass: string | undefined): string {
   if (!functionalClass) return 'Unclassified'
@@ -247,73 +235,6 @@ function toOpportunityCategory(functionalClass: string | undefined): string {
     .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
-}
-
-function buildOpportunityRow(params: {
-  rawMaterialId: number
-  rawMaterialSku: string
-  companyName: string
-  usedInProducts: number
-  rec: AgnesRecommendation
-}): OpportunityRow | null {
-  const { rawMaterialId, rawMaterialSku, companyName, usedInProducts, rec } = params
-  const top = rec.substitutes[0]
-  if (!top) return null
-
-  const confidence = clamp01(
-    typeof top.combined_score === 'number'
-      ? top.combined_score
-      : typeof top.confidence === 'number'
-        ? top.confidence
-        : top.similarity
-  )
-
-  const currentSupplier = rec.original.current_suppliers[0] ?? 'Unknown'
-  const supplierKey = currentSupplier
-  const risk = rec.original.single_source_risk
-    ? 'High (single source)'
-    : top.compliance
-      ? 'Moderate'
-      : 'Compliance review'
-
-  const matchReasoning: OpportunityMatchLine[] = [
-    { label: 'Similarity', detail: formatPct(clamp01(top.similarity)) },
-    { label: 'Functional fit', detail: formatPct(clamp01(top.functional_fit)) },
-    { label: 'Compliance', detail: top.compliance ? 'Pass' : 'Review required' },
-  ]
-
-  const brandsAffected: OpportunityBrandAffected[] = [
-    {
-      name: companyName,
-      productCount: usedInProducts,
-    },
-  ]
-
-  const consolidation: OpportunityConsolidation = {
-    via: `Primary alternative: ${top.name}`,
-    combinedVolume: `Used in ${usedInProducts} finished product${usedInProducts === 1 ? '' : 's'}`,
-    estimatedSavings: formatSavings(top),
-    supplierRisk: risk,
-  }
-
-  return {
-    id: String(rawMaterialId),
-    rawMaterialId,
-    rawMaterialSku,
-    confidence,
-    ingredientName: rec.original.name,
-    brandsDisplay: `${companyName}${usedInProducts > 1 ? `+${usedInProducts - 1}` : ''}`,
-    currentSupplier,
-    altSupplier: top.name,
-    risk,
-    brandKey: companyName,
-    category: toOpportunityCategory(rec.original.functional_class),
-    supplierKey,
-    status: rec.original.single_source_risk ? 'open' : 'in_review',
-    matchReasoning,
-    brandsAffected,
-    consolidation,
-  }
 }
 
 function mapOpportunityApiRow(item: AgnesOpportunity): OpportunityRow {
