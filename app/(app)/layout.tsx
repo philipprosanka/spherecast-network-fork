@@ -15,17 +15,15 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode
 }) {
-  const [scopeCompanyId, pickerCompanies, agnesAvailable] = await Promise.all([
-    resolveCompanyScopeFilter(),
+  const scopeCompanyId = await resolveCompanyScopeFilter()
+
+  const [pickerCompanies, agnesAvailable, counts, searchItems] = await Promise.all([
     getCompanyPickerList().catch((error) => {
       const message = error instanceof Error ? error.message : String(error)
       console.warn(`[app-layout] company picker fallback: ${message}`)
       return []
     }),
     isAgnesAvailable(),
-  ])
-
-  const [counts, searchItems] = await Promise.all([
     getNavCounts(scopeCompanyId).catch((error) => {
       const message = error instanceof Error ? error.message : String(error)
       console.warn(`[app-layout] nav counts fallback: ${message}`)
