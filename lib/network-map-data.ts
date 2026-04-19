@@ -10,6 +10,7 @@ export const networkMapNodeSchema = z.object({
   name: z.string().min(1),
   kind: z.enum(['customer', 'supplier']),
   position: lngLat,
+  refId: z.number().int().positive(),
 })
 
 export const networkMapArcSchema = z.object({

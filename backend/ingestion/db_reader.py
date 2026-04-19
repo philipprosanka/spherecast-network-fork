@@ -475,6 +475,7 @@ def get_network_map_data(path: str | Path | None = None) -> dict:
             "name": co["Name"],
             "kind": "customer",
             "position": [float(lng), float(lat)],
+            "refId": int(co['Id']),
         })
 
     supplier_map = dict(zip(dfs["Supplier"]["Id"], dfs["Supplier"]["Name"]))
@@ -491,6 +492,7 @@ def get_network_map_data(path: str | Path | None = None) -> dict:
             "position": [float(f["Lng"]), float(f["Lat"])],
             "city": f.get("City"),
             "state": f.get("State"),
+            "refId": int(f["SupplierId"]),
         })
 
     # Fallback: supplier HQ if no facilities
@@ -508,6 +510,7 @@ def get_network_map_data(path: str | Path | None = None) -> dict:
             "kind": "supplier",
             "supplierId": int(s["Id"]),
             "position": [float(lng), float(lat)],
+            "refId": int(s["Id"]),
         })
 
     import math
