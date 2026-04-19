@@ -7,7 +7,6 @@ import type { SourceViewMode } from '@/components/sourcing/SourceViewToggle'
 import { IngredientProfileBadges } from '@/components/sourcing/IngredientProfileBadges'
 import SourcingTableShell from '@/components/sourcing/SourcingTableShell'
 import { useTableQuery } from '@/components/sourcing/useTableQuery'
-import { useIngredientProfiles } from '@/components/sourcing/useIngredientProfiles'
 
 interface Props {
   rows: RawMaterialRow[]
@@ -64,18 +63,6 @@ export default function RawMaterialsTable({ rows }: Props) {
     })
   }, [filteredWithoutSort, sort])
 
-  const materialIds = useMemo(() => filtered.map((r) => r.id), [filtered])
-  const { profiles } = useIngredientProfiles(materialIds)
-
-  const filteredWithProfiles = useMemo(
-    () =>
-      filtered.map((row) => ({
-        ...row,
-        profile: profiles[row.id],
-      })),
-    [filtered, profiles]
-  )
-
   return (
     <SourcingTableShell
       ariaLabel="Raw materials table"
@@ -114,7 +101,7 @@ export default function RawMaterialsTable({ rows }: Props) {
       emptyMessage={`No materials match "${query}"`}
       rowContent={
         <>
-          {filteredWithProfiles.map((row) => (
+          {filtered.map((row) => (
             <Link
               key={row.id}
               href={`/raw-materials/${row.id}`}
@@ -123,10 +110,7 @@ export default function RawMaterialsTable({ rows }: Props) {
             >
               <span className="data-sku">{row.sku}</span>
               <span className="data-name">{row.companyName}</span>
-              <div
-                className="text-xs overflow-hidden"
-                style={{ minHeight: '24px' }}
-              >
+              <div className="text-xs overflow-hidden ingredient-profile-cell">
                 {row.profile ? (
                   <IngredientProfileBadges profile={row.profile} compact />
                 ) : (
@@ -149,7 +133,7 @@ export default function RawMaterialsTable({ rows }: Props) {
       }
       tileContent={
         <>
-          {filteredWithProfiles.map((row) => (
+          {filtered.map((row) => (
             <Link
               key={row.id}
               href={`/raw-materials/${row.id}`}

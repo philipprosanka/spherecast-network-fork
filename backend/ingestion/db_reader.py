@@ -175,7 +175,21 @@ def get_companies(path: str | Path | None = None, scope_company_id: int | None =
     return result
 
 
+def _safe_col(row, col):
+    """Get column value from a pandas Series row, return None if missing or NaN."""
+    val = row.get(col)
+    if val is None:
+        return None
+    try:
+        if isinstance(val, float) and pd.isna(val):
+            return None
+    except Exception:
+        pass
+    return val
+
+
 def get_company_detail(company_id: int, path: str | Path | None = None) -> dict | None:
+    import json as _json
     dfs = load_db(path)
     co_row = dfs["Company"][dfs["Company"]["Id"] == company_id]
     if co_row.empty:
@@ -203,11 +217,130 @@ def get_company_detail(company_id: int, path: str | Path | None = None) -> dict 
             "usedInProducts": int(bom_comps.shape[0]),
         })
 
+    def _jlist(col) -> list:
+        raw = _safe_col(co, col)
+        if raw is None:
+            return []
+        try:
+            return _json.loads(raw)
+        except Exception:
+            return []
+
+    fy = _safe_col(co, "FoundedYear")
+    profile = {
+        "type": _safe_col(co, "Type"),
+        "hqCity": _safe_col(co, "HQCity"),
+        "hqState": _safe_col(co, "HQState"),
+        "hqCountry": _safe_col(co, "HQCountry"),
+        "channels": _jlist("Channels"),
+        "revenueRange": _safe_col(co, "RevenueRange"),
+        "foundedYear": int(fy) if fy is not None else None,
+        "certifications": _jlist("Certifications"),
+    }
+
     return {
         "id": int(co["Id"]),
         "name": co["Name"],
+        "profile": profile,
         "finishedGoods": fg_list,
         "rawMaterials": rm_list,
+    }
+
+
+def get_supplier_performance(supplier_id: int, path: str | Path | None = None) -> dict | None:
+    db_path = path or _DB_PATH
+    try:
+        with sqlite3.connect(db_path) as conn:
+            row = conn.execute(
+                "SELECT OnTimeRate, RejectionRate, AvgLeadDays, LastAuditDate, AuditScore, Notes FROM SupplierPerformance WHERE SupplierId = ?",
+                (supplier_id,),
+            ).fetchone()
+            if not row:
+                return None
+            return {
+                "onTimeRate": row[0],
+                "rejectionRate": row[1],
+                "avgLeadDays": row[2],
+                "lastAuditDate": row[3],
+                "auditScore": row[4],
+                "notes": row[5],
+            }
+    except Exception:
+        return None
+
+
+def get_audit_log(
+    scope_company_id: int | None = None,
+    entity_type: str | None = None,
+    limit: int = 50,
+    path: str | Path | None = None,
+) -> list[dict]:
+    db_path = path or _DB_PATH
+    try:
+        with sqlite3.connect(db_path) as conn:
+            clauses = []
+            params: list = []
+            if scope_company_id is not None:
+                clauses.append("(ScopeCompanyId = ? OR ScopeCompanyId IS NULL)")
+                params.append(scope_company_id)
+            if entity_type is not None:
+                clauses.append("EntityType = ?")
+                params.append(entity_type)
+            where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+            params.append(limit)
+            rows = conn.execute(
+                f"SELECT Id, CreatedAt, EntityType, EntityId, EntityLabel, Action, Reasoning, UserId, ScopeCompanyId "
+                f"FROM AuditLog {where} ORDER BY Id DESC LIMIT ?",
+                params,
+            ).fetchall()
+            return [
+                {
+                    "id": r[0],
+                    "createdAt": r[1],
+                    "entityType": r[2],
+                    "entityId": r[3],
+                    "entityLabel": r[4],
+                    "action": r[5],
+                    "reasoning": r[6],
+                    "userId": r[7],
+                    "scopeCompanyId": r[8],
+                }
+                for r in rows
+            ]
+    except Exception:
+        return []
+
+
+def create_audit_log_entry(
+    entity_type: str,
+    entity_id: str,
+    entity_label: str | None,
+    action: str,
+    reasoning: str | None = None,
+    user_id: str | None = None,
+    scope_company_id: int | None = None,
+    path: str | Path | None = None,
+) -> dict:
+    db_path = path or _DB_PATH
+    with sqlite3.connect(db_path) as conn:
+        cur = conn.execute(
+            """INSERT INTO AuditLog (EntityType, EntityId, EntityLabel, Action, Reasoning, UserId, ScopeCompanyId)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (entity_type, entity_id, entity_label, action, reasoning, user_id, scope_company_id),
+        )
+        conn.commit()
+        row_id = cur.lastrowid
+        row = conn.execute("SELECT Id, CreatedAt FROM AuditLog WHERE Id = ?", (row_id,)).fetchone()
+    return {
+        "id": row[0],
+        "createdAt": row[1],
+        "entityType": entity_type,
+        "entityId": entity_id,
+        "entityLabel": entity_label,
+        "action": action,
+        "reasoning": reasoning,
+        "userId": user_id,
+        "scopeCompanyId": scope_company_id,
     }
 
 
