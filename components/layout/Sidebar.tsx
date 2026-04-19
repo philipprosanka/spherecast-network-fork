@@ -223,8 +223,8 @@ export default function Sidebar({
       </nav>
 
       <div className="viewer-footer">
-        <span className="viewer-org">Test User</span>
-        <span className="viewer-role">Hackathon Member</span>
+        <span className="viewer-org">Spherecast</span>
+        <span className="viewer-role">Workspace</span>
       </div>
     </aside>
   )
