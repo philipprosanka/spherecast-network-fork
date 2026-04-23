@@ -1,3 +1,5 @@
+export const maxDuration = 60
+
 import Sidebar from '@/components/layout/Sidebar'
 import AppTopNav from '@/components/layout/AppTopNav'
 import MapRightSidebar from '@/components/network-map/MapRightSidebar'

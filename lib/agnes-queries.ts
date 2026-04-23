@@ -37,7 +37,7 @@ function logFallback(queryName: string, error: unknown): void {
 
 export async function isAgnesAvailable(): Promise<boolean> {
   try {
-    const res = await agnesGet('/')
+    const res = await agnesGet('/', undefined, 4_000)
     return res.ok
   } catch {
     return false

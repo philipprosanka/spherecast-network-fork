@@ -19,13 +19,14 @@ async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
 
 export async function agnesGet(
   path: string,
-  params?: URLSearchParams
+  params?: URLSearchParams,
+  timeoutMs = 4_000
 ): Promise<Response> {
   const url = `${AGNES_URL}${path}${params?.toString() ? `?${params}` : ''}`
   return safeFetch(url, {
     headers: { 'X-API-Key': AGNES_KEY },
     next: { revalidate: 0 },
-    signal: AbortSignal.timeout(55_000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
 }
 
